@@ -1,0 +1,75 @@
+# Environment
+.env
+.env.local
+.venv/
+venv/
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+dist/
+build/
+*.egg
+
+# Jupyter
+.ipynb_checkpoints/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Datasets and model artifacts stay out of git: the full data lives only on the
+# machine that runs the real workloads. What git tracks instead is
+# data/manifest.yaml -- a fingerprint per dataset, written by
+# `packagename-data subsample` -- and the small per-region samples under
+# data/sample/, which is what local test runs consume. The .gitkeep exceptions
+# keep the empty layer directories in the tree.
+data/raw/**
+!data/raw/.gitkeep
+data/bronze/**
+!data/bronze/.gitkeep
+data/silver/**
+!data/silver/.gitkeep
+data/gold/**
+!data/gold/.gitkeep
+models/**
+!models/.gitkeep
+
+# Generated reports
+reports/figures/**
+!reports/figures/
+!reports/figures/.gitkeep
+
+# Hydra run directories
+outputs/
+multirun/
+
+# Experiment tracking and logs
+wandb/
+logs/
+
+# Tooling caches and coverage
+.pytest_cache/
+.ruff_cache/
+.ty_cache/
+htmlcov/
+.coverage
+.coverage.*
+coverage.xml
+
+# Project notes (personal)
+anotaciones/
+
+# Secrets / credentials
+*.pem
+*.key
+credentials/

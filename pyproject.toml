@@ -1,0 +1,276 @@
+[project]
+name = "packagename"
+version = "0.1.0"
+description = "Template for Machine Learning projects with a medallion ETL pipeline."
+readme = "README.md"
+requires-python = ">=3.12"
+license = { file = "LICENSE" }
+license-files = ["LICENSE"]
+authors = [{ name = "Luis Ardevol", email = "76615495+uisitoam@users.noreply.github.com" }]
+keywords = ["machine-learning", "etl", "template", "hydra", "wandb"]
+classifiers = [
+    # "Private :: Do Not Upload" is a PyPI-recognised marker that blocks an
+    # accidental publish. Remove it when the package is meant to be released.
+    "Private :: Do Not Upload",
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Science/Research",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Typing :: Typed",
+]
+dependencies = [
+    # Imported directly by viz.style, so declared directly rather than relied on
+    # as a transitive dependency of matplotlib.
+    "cycler>=0.12",
+    "hydra-core>=1.3.2",
+    "matplotlib>=3.10.8",
+    "numpy>=2.1",
+    "omegaconf>=2.3.0",
+    "pandas>=2.2",
+    "pyarrow>=18.0",
+    "pydantic>=2.12",
+    # The `yaml` extra is what backs YamlConfigSettingsSource in packagename.config.
+    # The floor is 2.14.2 because earlier versions carry GHSA-4xgf-cpjx-pc3j.
+    "pydantic-settings[yaml]>=2.15.0",
+    "wandb>=0.19",
+]
+
+[project.urls]
+Repository = "https://github.com/uisitoam/PACKAGENAME"
+Issues = "https://github.com/uisitoam/PACKAGENAME/issues"
+Changelog = "https://github.com/uisitoam/PACKAGENAME/blob/main/CHANGELOG.md"
+
+[project.scripts]
+packagename-stage = "packagename.cli.stage:main"
+packagename-train = "packagename.cli.train:main"
+packagename-data = "packagename.cli.data:main"
+
+[dependency-groups]
+# The stack the notebooks in `notebooks/` import. It is a group and not a runtime
+# dependency because nothing under `src/` imports any of it yet: deptry would
+# report every entry as unused, and `just deps` would fail on a correct project.
+# Move an entry into `dependencies` the moment the code that needs it lands in
+# the package -- that is the signal that the analysis has stopped being explor-
+# atory.
+analysis = [
+    # The kernel Jupyter runs the notebooks in. It belongs here and not in
+    # `dependencies`: nothing imports it, so deptry reports it as an unused
+    # runtime dependency and `just deps` fails.
+    "ipykernel>=7.3.0",
+    # Reading ERA5 / MARS output. xarray needs an engine, and it does not declare
+    # one, so the engine is named here rather than left to chance.
+    "netcdf4>=1.7.4",
+    "scikit-learn>=1.9.0",
+    "scipy>=1.18.0",
+    "shap>=0.52.0",
+    # statsmodels is what supplies ACF/PACF, STL and the VIF used in 01 and 03.
+    "statsmodels>=0.14.6",
+    "xarray>=2026.7.0",
+    "xgboost>=3.4.0",
+    # Transitive through shap, floored here only because the resolver otherwise
+    # walks back to a numba/llvmlite pair that predates Python 3.12 and fails to
+    # build. Drop both lines once shap floors them itself.
+    "llvmlite>=0.44",
+    "numba>=0.61",
+]
+dev = [
+    "deptry>=0.20",
+    "pandas-stubs>=2.2",
+    "pre-commit>=4.5.1",
+    "pytest>=8.0",
+    "pytest-cov>=6.0",
+    "ruff>=0.16.0,<0.17",
+    # ty is in beta and its diagnostics may change between any two releases, so
+    # the range is deliberately narrow: bump it via a reviewable commit.
+    "ty>=0.0.64,<0.1",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/packagename"]
+
+# ----------------------------------------------------------------------------
+# uv
+# ----------------------------------------------------------------------------
+[tool.uv]
+# CI syncs with `--all-groups`, so listing both groups here is what keeps a bare
+# `uv sync` from installing a *narrower* environment than the one CI tests.
+# Without it, running `uv sync` after touching a dependency would uninstall the
+# analysis stack and break every notebook.
+default-groups = ["dev", "analysis"]
+
+# ----------------------------------------------------------------------------
+# Ruff
+# ----------------------------------------------------------------------------
+[tool.ruff]
+target-version = "py312"
+line-length = 100
+src = ["src", "tests"]
+# notebooks/ is a shared scratch space across machines and people, not product
+# code: no lint, no format. nbstripout still cleans outputs on commit. The
+# pre-commit ruff hooks pass --force-exclude, so this exclude is honoured there
+# too, and the CI hooks job inherits it through `pre-commit run --all-files`.
+exclude = ["notebooks/"]
+extend-include = ["*.ipynb"]
+
+[tool.ruff.format]
+# Ruff formats Python blocks inside Markdown as of 0.16. Left on, it collapses
+# the aligned trailing comments that make the examples in docs/ readable as
+# tables, and expands illustrative one-liners across five lines. Prose is
+# formatted for a reader, not a compiler.
+exclude = ["*.md"]
+
+[tool.ruff.lint]
+select = [
+    "A",    # flake8-builtins (shadowing stdlib / builtins)
+    "ANN",  # flake8-annotations
+    "ARG",  # flake8-unused-arguments
+    "B",    # flake8-bugbear
+    "C4",   # flake8-comprehensions
+    "D",    # pydocstyle
+    "E",    # pycodestyle errors
+    "F",    # pyflakes
+    "I",    # isort
+    "N",    # pep8-naming
+    "NPY",  # numpy-specific rules
+    "PD",   # pandas-vet
+    "PTH",  # flake8-use-pathlib
+    "RET",  # flake8-return
+    "RUF",  # ruff-specific rules
+    "S",    # flake8-bandit
+    "SIM",  # flake8-simplify
+    "TID",  # flake8-tidy-imports
+    "UP",   # pyupgrade
+    "W",    # pycodestyle warnings
+]
+ignore = [
+    "ANN401", # `**kwargs: Any` is correct for arguments forwarded to a third party
+    "D105",   # dunder methods document themselves
+    "D107",   # __init__ docstring lives in the class docstring
+    "D203",   # incompatible with D211
+    "D213",   # incompatible with D212
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = [
+    "ANN",     # tests do not need full annotations
+    "D",       # nor docstrings
+    "S101",    # assert is the point
+    "PLR2004", # magic values are fine in assertions
+]
+"*.ipynb" = [
+    "D",
+    "ANN",
+    "E402",
+    # A notebook's `assert` is a sanity check on the data, not a contract the
+    # optimiser may remove: the same reason S101 is off for tests applies here.
+    "S101",
+    # PD013 assumes every `.stack()` is pandas' row-to-column reshape. It is not:
+    # xarray's flattens a spatial grid into one dimension, and unstacking a
+    # correlation matrix into pairs keeps the index `melt` would discard.
+    "PD013",
+]
+
+[tool.ruff.lint.pydocstyle]
+convention = "google"
+
+[tool.ruff.lint.flake8-tidy-imports]
+ban-relative-imports = "parents"
+
+# ----------------------------------------------------------------------------
+# ty
+# ----------------------------------------------------------------------------
+[tool.ty.environment]
+python-version = "3.12"
+
+[tool.ty.src]
+# Notebooks are excluded, and the reason is the stubs rather than the code. ty
+# reads `.ipynb`, but the scientific stack it would have to reason about is
+# barely typed: `DatetimeIndex.hour` comes back as `Index[Any]`, real keyword
+# arguments of `LassoCV` are missing from the stubs, and xgboost ships none. The
+# result is a couple of dozen diagnostics that say nothing about the code, and
+# silencing them one by one would put more suppressions in `notebooks/` than
+# there are in the whole package. Notebook code is verified by running it.
+# `src/` and `tests/` are still checked, which is where a type error costs
+# something.
+exclude = ["notebooks/"]
+
+[tool.ty.analysis]
+# torch and tensorflow are seeded when present but are never a hard requirement:
+# packagename.seed guards both imports with try/except ImportError.
+allowed-unresolved-imports = ["tensorflow", "torch"]
+# ty is the only type checker here, so suppressions name it explicitly.
+respect-type-ignore-comments = false
+
+[tool.ty.rules]
+# Off by default. Enabled because ty has no strict mode yet, and these are the
+# checks whose absence would otherwise let sloppy typing through unnoticed.
+missing-type-argument = "error"   # bare `dict` where `dict[str, int]` was meant
+possibly-missing-attribute = "error"
+possibly-missing-import = "error"
+possibly-unresolved-reference = "error"
+division-by-zero = "error"
+# A suppression must name the rule it suppresses, so it cannot silently widen.
+blanket-ignore-comment = "error"
+# Stale suppressions are removed rather than left to accumulate.
+unused-ignore-comment = "error"
+
+[tool.ty.terminal]
+# Warnings are not a category anyone triages; fail on them.
+error-on-warning = true
+
+# ----------------------------------------------------------------------------
+# pytest
+# ----------------------------------------------------------------------------
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = [
+    "--strict-markers",
+    "--strict-config",
+    "--cov=packagename",
+    "--cov-report=term-missing",
+    "--cov-fail-under=85",
+]
+markers = [
+    # "touches the filesystem" would have covered nearly every test here and so
+    # made a useless filter. What is worth separating is breadth, not I/O.
+    "integration: drives several layers at once -- a whole entrypoint, or the W&B SDK",
+    # No test carries this yet: the suite runs in seconds. It is registered so
+    # that the first genuinely slow test -- a real training run, most likely --
+    # has somewhere to go, and `just test-fast` starts excluding it for free.
+    "slow: takes long enough that the pre-push hook should not wait for it",
+]
+filterwarnings = ["error", "default::DeprecationWarning"]
+
+[tool.coverage.run]
+branch = true
+source = ["src/packagename"]
+
+[tool.coverage.report]
+exclude_also = [
+    "if TYPE_CHECKING:",
+    "raise NotImplementedError",
+    "@overload",
+]
+
+# ----------------------------------------------------------------------------
+# deptry
+# ----------------------------------------------------------------------------
+[tool.deptry]
+known_first_party = ["packagename"]
+
+[tool.deptry.per_rule_ignores]
+# torch and tensorflow are seeded when present but are never a hard requirement:
+# packagename.seed guards both imports with try/except ImportError.
+DEP001 = ["tensorflow", "torch"]
+# xarray is imported lazily by packagename.data.sample for NetCDF sampling only,
+# so it stays in the analysis group -- which deptry counts as dev -- rather than
+# becoming a runtime dependency every import of the package pays for.
+DEP004 = ["xarray"]
+# pyarrow is the parquet engine pandas loads at runtime, so it is never imported
+# by name in our code.
+DEP002 = ["pyarrow"]

@@ -1,0 +1,26 @@
+name: Release Please
+
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  release-please:
+    runs-on: ubuntu-latest
+    steps:
+      # Note: a release PR opened with the default GITHUB_TOKEN does not trigger
+      # other workflows, so CI will not run on it. If that matters, supply a PAT
+      # or a GitHub App token through the `token` input.
+      - uses: googleapis/release-please-action@45996ed1f6d02564a971a2fa1b5860e934307cf7 # v5.0.0
+        with:
+          # Passing `release-type` here would make the action ignore both files
+          # below and use its own defaults instead, which is a quiet way to end
+          # up with configuration that looks authoritative but is never read.
+          # The release type lives in the config file.
+          config-file: release-please-config.json
+          manifest-file: .release-please-manifest.json

@@ -1,0 +1,40 @@
+name: Audit
+
+# A vulnerability lands in a dependency without anyone touching this repository,
+# so the audit runs on a schedule as well as on changes to the locked set.
+on:
+  push:
+    branches: [main]
+    paths: [uv.lock, pyproject.toml, .github/workflows/audit.yml]
+  pull_request:
+    paths: [uv.lock, pyproject.toml, .github/workflows/audit.yml]
+  schedule:
+    - cron: "0 6 * * 1" # Mondays, 06:00 UTC
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  vulnerabilities:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: astral-sh/setup-uv@20cfd1bf945f4377ade1205e4dbc17946fc9a30d # v10.0.1
+        with:
+          enable-cache: true
+
+      # The runtime set, not the dev tools: those never ship, and advisories
+      # against a linter are the kind of noise that gets a red build ignored.
+      - name: Export the locked runtime dependencies
+        run: uv export --frozen --no-dev --no-emit-project --format requirements-txt -o requirements-audit.txt
+
+      # --no-deps audits exactly the locked versions instead of re-resolving them,
+      # which is the whole point of having a lock file.
+      #
+      # To accept an advisory with no fix available, add
+      #   --ignore-vuln GHSA-xxxx-xxxx-xxxx
+      # with a comment saying why. Do not silence the job as a whole.
+      - name: Audit for known vulnerabilities
+        run: |
+          uvx pip-audit --no-deps --disable-pip --requirement requirements-audit.txt

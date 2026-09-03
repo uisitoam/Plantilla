@@ -1,0 +1,7 @@
+[files]
+# Generated content: not ours to correct.
+extend-exclude = ["uv.lock", "CHANGELOG.md", "*.ipynb", "docs/patontos_aka_yo.md"]
+
+[default.extend-words]
+# Deliberately misspelled keys, used to test that the config rejects them.
+projekt = "projekt"

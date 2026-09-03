@@ -1,0 +1,112 @@
+# Revisions are pinned on purpose: everyone gets the same linters.
+# Run `just update-hooks` to bump them deliberately, as a reviewable commit.
+default_install_hook_types: [pre-commit, commit-msg, pre-push]
+
+repos:
+  # Basic hygiene
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v6.0.0
+    hooks:
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: check-yaml
+      - id: check-toml
+      - id: check-json
+      - id: check-added-large-files
+        args: ["--maxkb=1024"]
+        exclude: ^uv\.lock$
+      - id: check-merge-conflict
+      - id: check-case-conflict
+      - id: mixed-line-ending
+      - id: debug-statements
+
+  # Ruff: lint + format (replaces black, flake8, isort).
+  #
+  # Run through uv instead of the upstream mirror so that uv.lock is the only
+  # place ruff's version is written down. A `rev:` here would be a second number
+  # to keep in step with the lock file, and `just lint` and this hook would
+  # disagree the moment they drifted -- which is exactly what happened before.
+  - repo: local
+    hooks:
+      - id: ruff-check
+        name: ruff (lint)
+        # --force-exclude: pre-commit passes explicit paths, which otherwise
+        # bypass the exclude list in pyproject.toml.
+        entry: uv run ruff check --fix --force-exclude
+        language: system
+        types_or: [python, pyi, jupyter]
+
+      - id: ruff-format
+        name: ruff (format)
+        entry: uv run ruff format --force-exclude
+        language: system
+        types_or: [python, pyi, jupyter]
+
+  # Strip notebook outputs before they reach a commit
+  - repo: https://github.com/kynan/nbstripout
+    rev: 0.9.1
+    hooks:
+      - id: nbstripout
+
+  # Secret scanning: data projects accumulate credentials
+  - repo: https://github.com/gitleaks/gitleaks
+    rev: v8.30.0
+    hooks:
+      - id: gitleaks
+
+  # Typos in code, comments and docs
+  - repo: https://github.com/crate-ci/typos
+    # A concrete tag, not the moving `v1` that autoupdate resolves to.
+    rev: v1.48.0
+    hooks:
+      - id: typos
+        # Notebooks are a shared scratch space with prose in several languages;
+        # a spell checker has no business there.
+        exclude: ^notebooks/
+
+  # Validate GitHub Actions workflows
+  - repo: https://github.com/rhysd/actionlint
+    rev: v1.7.12
+    hooks:
+      - id: actionlint
+
+  # Fail if uv.lock has drifted from pyproject.toml
+  - repo: https://github.com/astral-sh/uv-pre-commit
+    rev: 0.11.32
+    hooks:
+      - id: uv-lock
+
+  - repo: https://github.com/qoomon/git-conventional-commits
+    rev: v2.9.0
+    hooks:
+      - id: conventional-commits
+        stages: [commit-msg]
+
+  # Slower gates run on push, not on every commit.
+  - repo: local
+    hooks:
+      - id: ty
+        name: type check
+        entry: uv run ty check
+        language: system
+        types_or: [python, pyi]
+        pass_filenames: false # ty resolves the whole project, see pyproject.toml
+        stages: [pre-push]
+
+      - id: deptry
+        name: check dependency declarations
+        entry: uv run deptry src
+        language: system
+        pass_filenames: false
+        stages: [pre-push]
+
+      - id: pytest
+        name: run tests
+        # Integration tests are included: they are the ones that would catch a
+        # broken entrypoint, and they cost about a second. Only tests marked
+        # `slow` are deferred to CI, so that pushing stays quick.
+        entry: uv run pytest -x -q --no-cov -m "not slow"
+        language: system
+        pass_filenames: false
+        always_run: true
+        stages: [pre-push]

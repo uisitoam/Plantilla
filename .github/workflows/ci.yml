@@ -1,0 +1,77 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  # No test may reach the W&B backend.
+  WANDB_MODE: disabled
+
+jobs:
+  # Runs the developer's own hooks rather than a hand-copied subset, so CI cannot
+  # drift into being laxer than the local gate. This covers ruff, the hygiene
+  # checks, secret scanning, typos, actionlint and the uv.lock drift check.
+  hooks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: astral-sh/setup-uv@20cfd1bf945f4377ade1205e4dbc17946fc9a30d # v10.0.1
+        with:
+          enable-cache: true
+      # Fails if uv.lock has drifted from pyproject.toml, so CI can never
+      # silently test a different dependency set than developers have.
+      - run: uv sync --locked --all-groups
+      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.cache/pre-commit
+          key: pre-commit-${{ hashFiles('.pre-commit-config.yaml') }}
+      - run: uv run pre-commit run --all-files --show-diff-on-failure
+
+  # The gates that pre-commit only runs on push, and so are not covered above.
+  typecheck:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: astral-sh/setup-uv@20cfd1bf945f4377ade1205e4dbc17946fc9a30d # v10.0.1
+        with:
+          enable-cache: true
+      - run: uv sync --locked --all-groups
+      - run: uv run ty check --output-format=github
+      - run: uv run deptry src
+
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.12", "3.13"]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          # git provenance is logged with every run, and the tracking tests
+          # assert on it, so the tags and history have to be present.
+          fetch-depth: 0
+      - uses: astral-sh/setup-uv@20cfd1bf945f4377ade1205e4dbc17946fc9a30d # v10.0.1
+        with:
+          enable-cache: true
+          python-version: ${{ matrix.python-version }}
+      - run: uv sync --locked --all-groups
+      - run: uv run pytest --cov-report=xml
+      - name: Check the console scripts are installed and runnable
+        run: |
+          uv run packagename-stage --list
+          uv run packagename-train
+      # The example stages synthesise their own inputs, so the whole pipeline
+      # runs here with nothing to download -- a stage that stopped running
+      # cleanly fails the build.
+      - name: Run the example pipeline from scratch
+        run: uv run packagename-stage --all
