@@ -21,7 +21,7 @@ jobs:
         with:
           enable-cache: true
       - run: uv lock
-      - uses: EndBug/add-and-commit@v9
+      - uses: EndBug/add-and-commit@v11
         with:
           message: "chore: update uv.lock"
           default_author: github_actions
