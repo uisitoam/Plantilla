@@ -33,7 +33,7 @@ dependencies = [
     # The `yaml` extra is what backs YamlConfigSettingsSource in packagename.config.
     # The floor is 2.14.2 because earlier versions carry GHSA-4xgf-cpjx-pc3j.
     "pydantic-settings[yaml]>=2.15.0",
-    "wandb>=0.19",
+    "wandb>=0.30.0",
 ]
 
 [project.urls]
