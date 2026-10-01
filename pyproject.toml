@@ -61,7 +61,7 @@ analysis = [
     # Reading ERA5 / MARS output. xarray needs an engine, and it does not declare
     # one, so the engine is named here rather than left to chance.
     "netcdf4>=1.7.4",
-    "scikit-learn>=1.9.0",
+    "scikit-learn>=1.9.1",
     "scipy>=1.18.0",
     "shap>=0.52.0",
     # statsmodels is what supplies ACF/PACF, STL and the VIF used in 01 and 03.
@@ -71,19 +71,19 @@ analysis = [
     # Transitive through shap, floored here only because the resolver otherwise
     # walks back to a numba/llvmlite pair that predates Python 3.12 and fails to
     # build. Drop both lines once shap floors them itself.
-    "llvmlite>=0.44",
+    "llvmlite>=0.49.0",
     "numba>=0.61",
 ]
 dev = [
     "deptry>=0.20",
-    "pandas-stubs>=2.2",
+    "pandas-stubs>=3.0.5.260914",
     "pre-commit>=4.5.1",
     "pytest>=8.0",
     "pytest-cov>=6.0",
-    "ruff>=0.16.0,<0.17",
+    "ruff>=0.16.9,<0.17",
     # ty is in beta and its diagnostics may change between any two releases, so
     # the range is deliberately narrow: bump it via a reviewable commit.
-    "ty>=0.0.64,<0.1",
+    "ty>=0.0.84,<0.1",
 ]
 
 [build-system]
