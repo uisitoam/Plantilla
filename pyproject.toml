@@ -27,7 +27,7 @@ dependencies = [
     "matplotlib>=3.10.8",
     "numpy>=2.1",
     "omegaconf>=2.3.0",
-    "pandas>=2.2",
+    "pandas>=3.0.6",
     "pyarrow>=18.0",
     "pydantic>=2.12",
     # The `yaml` extra is what backs YamlConfigSettingsSource in packagename.config.
